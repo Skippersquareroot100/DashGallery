@@ -1,17 +1,19 @@
 # DashGallery
 
-DashGallery is a full-stack image gallery starter built with a Laravel API backend and a Vue 3 single-page frontend. It is structured for cookie-based SPA authentication with Laravel Sanctum and includes the core screens needed for an authenticated gallery experience: account registration, login, upload, and a personal image area.
+DashGallery is a full-stack private image gallery project built with a Laravel API backend and a Vue 3 single-page frontend. The application is structured around first-party SPA authentication with Laravel Sanctum, so the browser client can register users, log users in, keep an authenticated session, and call protected API routes with CSRF protection.
 
-The current codebase is a strong foundation for a private image management application. Authentication and layout are wired, while the upload and gallery pages are intentionally ready for the next phase: image storage, image metadata, gallery APIs, and image rendering.
+The repository currently provides the foundation for an authenticated gallery product: account registration, login, logout, protected navigation, an Upload route, and a My Images route. The image upload, storage, listing, and deletion features are prepared as the next development phase.
 
 ## Project Overview
 
-DashGallery is split into two applications:
+This repository contains two separate applications:
 
-- `backend/` - Laravel 11 API application with Sanctum, Breeze-style authentication controllers, database migrations, and PHPUnit feature tests.
-- `frontend/` - Vue 3 and Vite SPA with Vue Router, Axios, Tailwind CSS, Headless UI navigation, and Heroicons.
+| App | Path | Purpose |
+| --- | --- | --- |
+| Backend | `backend/` | Laravel 11 API, Sanctum authentication, Breeze-style auth controllers, database migrations, and PHPUnit tests |
+| Frontend | `frontend/` | Vue 3 + Vite SPA with Vue Router, Axios, Tailwind CSS, Headless UI, and Heroicons |
 
-The frontend communicates with the Laravel backend through a credentialed Axios client. Sanctum provides the CSRF cookie and browser-session authentication flow, making the project suitable for a first-party SPA where the frontend and backend are controlled together.
+The frontend uses a credentialed Axios client to communicate with Laravel. Before login or registration, it requests the Sanctum CSRF cookie from `/sanctum/csrf-cookie`, then submits credentials to the Laravel auth endpoints. Laravel creates a normal browser session, and protected API routes can then be accessed through Sanctum's `auth:sanctum` middleware.
 
 ## Tech Stack
 
@@ -19,10 +21,11 @@ The frontend communicates with the Laravel backend through a credentialed Axios 
 
 - PHP 8.2+
 - Laravel 11
-- Laravel Sanctum
-- Laravel Breeze auth controllers
-- MySQL or any Laravel-supported database
-- PHPUnit feature tests
+- Laravel Sanctum 4
+- Laravel Breeze authentication controllers
+- Eloquent ORM and Laravel migrations
+- PHPUnit 11 feature and unit tests
+- Composer for dependency management
 
 ### Frontend
 
@@ -33,28 +36,31 @@ The frontend communicates with the Laravel backend through a credentialed Axios 
 - Tailwind CSS 4
 - Headless UI Vue
 - Heroicons
+- npm for dependency management
 
 ## Core Features
 
 - User registration with name, email, password, and password confirmation.
-- User login through Laravel's session-based authentication flow.
-- CSRF protection using `GET /sanctum/csrf-cookie`.
-- Credentialed frontend requests with Axios.
-- Authenticated user endpoint at `GET /api/user`.
-- Logout flow through `POST /logout`.
-- Responsive application layout with desktop and mobile navigation.
-- Upload and My Images routes prepared for gallery functionality.
-- Laravel authentication tests included in the backend test suite.
+- User login through Laravel session authentication.
+- CSRF-protected SPA auth flow using Laravel Sanctum.
+- Authenticated `GET /api/user` endpoint.
+- Logout through `POST /logout`.
+- Vue Router based pages for Upload, My Images, Login, Signup, and Not Found.
+- Authenticated layout with desktop and mobile navigation.
+- Guest layout for authentication screens.
+- Axios client configured for credentials and XSRF support.
+- Backend auth feature tests included.
 
 ## Current Application Flow
 
 1. A visitor opens the Vue SPA.
-2. The visitor can register at `/signup` or log in at `/login`.
-3. Before submitting auth credentials, the frontend requests `/sanctum/csrf-cookie`.
-4. Laravel creates an authenticated browser session after successful login or registration.
-5. The user is redirected to the Upload screen.
-6. The top navigation gives access to Upload and My Images.
-7. The user can sign out from the profile menu.
+2. The visitor registers at `/signup` or logs in at `/login`.
+3. The frontend calls `GET /sanctum/csrf-cookie`.
+4. The frontend posts credentials to `/register` or `/login`.
+5. Laravel validates the request, creates or authenticates the user, regenerates the session, and returns an empty success response.
+6. The frontend redirects the user to the Upload screen.
+7. The authenticated layout gives access to Upload, My Images, and Sign out.
+8. Sign out posts to `/logout`, invalidates the Laravel session, and returns the user to Login.
 
 ## Project Structure
 
@@ -64,34 +70,40 @@ DashGallery/
 |-- backend/
 |   |-- app/
 |   |   |-- Http/
-|   |   |   |-- Controllers/Auth/     # Register, login, logout, reset, verification controllers
-|   |   |   `-- Requests/Auth/        # Login request validation
-|   |   `-- Models/User.php
-|   |-- config/                      # Laravel, Sanctum, CORS, session, database config
+|   |   |   |-- Controllers/Auth/      # Register, login, logout, password, and verification controllers
+|   |   |   |-- Middleware/            # Email verification middleware
+|   |   |   `-- Requests/Auth/         # Login request validation
+|   |   |-- Models/User.php
+|   |   `-- Providers/
+|   |-- config/                       # Laravel, Sanctum, CORS, session, and database config
 |   |-- database/
-|   |   |-- migrations/               # Users, cache, jobs, personal access tokens
-|   |   |-- factories/
-|   |   `-- seeders/
+|   |   |-- factories/UserFactory.php
+|   |   |-- migrations/                # Users, cache, jobs, personal access tokens
+|   |   `-- seeders/DatabaseSeeder.php
 |   |-- routes/
-|   |   |-- api.php                   # Authenticated API user route
-|   |   |-- auth.php                  # SPA auth endpoints
+|   |   |-- api.php                    # Protected API routes
+|   |   |-- auth.php                   # SPA auth endpoints
+|   |   |-- console.php
 |   |   `-- web.php
-|   |-- tests/Feature/Auth/          # Authentication feature tests
+|   |-- tests/
+|   |   |-- Feature/Auth/              # Authentication test coverage
+|   |   |-- Feature/ExampleTest.php
+|   |   `-- Unit/ExampleTest.php
 |   |-- composer.json
 |   `-- artisan
 `-- frontend/
     |-- src/
     |   |-- components/
-    |   |   |-- DefaultLayout.vue     # Authenticated app shell and navigation
-    |   |   `-- GuestLayout.vue       # Login/register shell
+    |   |   |-- DefaultLayout.vue      # Authenticated shell and navigation
+    |   |   `-- GuestLayout.vue        # Login/register wrapper
     |   |-- pages/
-    |   |   |-- Home.vue              # Upload route placeholder
-    |   |   |-- MyImages.vue          # Personal gallery placeholder
+    |   |   |-- Home.vue               # Upload page shell
+    |   |   |-- MyImages.vue           # Personal gallery page shell
     |   |   |-- Login.vue
     |   |   |-- Signup.vue
     |   |   `-- NotFound.vue
-    |   |-- axios.js                  # API client with credentials and XSRF support
-    |   |-- router.js                 # Vue Router routes
+    |   |-- axios.js                   # Credentialed API client
+    |   |-- router.js                  # Vue Router configuration
     |   |-- main.js
     |   `-- style.css
     |-- package.json
@@ -100,40 +112,40 @@ DashGallery/
 
 ## Frontend Routes
 
-| Route | Component | Purpose |
-| --- | --- | --- |
-| `/` | `Home.vue` inside `DefaultLayout.vue` | Upload screen placeholder |
-| `/images` | `MyImages.vue` inside `DefaultLayout.vue` | Personal image gallery placeholder |
-| `/login` | `Login.vue` | Existing user login |
-| `/signup` | `Signup.vue` | New user registration |
-| `/:pathMatch(.*)*` | `NotFound.vue` | Fallback page |
+| Route | Component | Layout | Purpose |
+| --- | --- | --- | --- |
+| `/` | `Home.vue` | `DefaultLayout.vue` | Upload page shell |
+| `/images` | `MyImages.vue` | `DefaultLayout.vue` | Personal image gallery page shell |
+| `/login` | `Login.vue` | `GuestLayout.vue` | Existing user login |
+| `/signup` | `Signup.vue` | `GuestLayout.vue` | New user registration |
+| `/:pathMatch(.*)*` | `NotFound.vue` | None | Fallback page |
 
 ## Backend Routes
 
-### API
+### API Routes
 
 | Method | Endpoint | Middleware | Purpose |
 | --- | --- | --- | --- |
 | `GET` | `/api/user` | `auth:sanctum` | Return the authenticated user |
 
-### Auth
+### Auth Routes
 
-| Method | Endpoint | Purpose |
-| --- | --- | --- |
-| `POST` | `/register` | Create a new user account |
-| `POST` | `/login` | Authenticate an existing user |
-| `POST` | `/logout` | End the authenticated session |
-| `POST` | `/forgot-password` | Send a password reset link |
-| `POST` | `/reset-password` | Reset a password |
-| `GET` | `/verify-email/{id}/{hash}` | Verify an email address |
-| `POST` | `/email/verification-notification` | Resend verification email |
+| Method | Endpoint | Middleware | Purpose |
+| --- | --- | --- | --- |
+| `POST` | `/register` | `guest` | Create a new account and log the user in |
+| `POST` | `/login` | `guest` | Authenticate an existing user |
+| `POST` | `/logout` | `auth` | End the authenticated session |
+| `POST` | `/forgot-password` | `guest` | Send a password reset link |
+| `POST` | `/reset-password` | `guest` | Reset a password |
+| `GET` | `/verify-email/{id}/{hash}` | `auth`, `signed`, `throttle` | Verify an email address |
+| `POST` | `/email/verification-notification` | `auth`, `throttle` | Resend verification email |
 
 ## Requirements
 
 - PHP 8.2 or newer
 - Composer
 - Node.js and npm
-- MySQL, MariaDB, SQLite, PostgreSQL, or another Laravel-supported database
+- MySQL, MariaDB, PostgreSQL, SQLite, or another Laravel-supported database
 
 ## Backend Setup
 
@@ -208,7 +220,7 @@ cd frontend
 npm run dev
 ```
 
-Open:
+Open the frontend in the browser:
 
 ```text
 http://localhost:5173
@@ -238,45 +250,54 @@ npm run preview
 ## Implementation Notes
 
 - `frontend/src/axios.js` sets `withCredentials: true` and `withXSRFToken: true`, which is required for Sanctum SPA authentication.
-- Login and registration request the CSRF cookie before posting credentials.
-- `DefaultLayout.vue` contains the authenticated navigation shell and logout action.
-- `Home.vue` and `MyImages.vue` currently define the page shells but do not yet upload, store, or render images.
-- `backend/routes/api.php` currently exposes only the authenticated user endpoint.
-- The backend already includes Laravel's default auth-related feature tests.
+- Login and registration both request `/sanctum/csrf-cookie` before posting credentials.
+- `DefaultLayout.vue` contains the authenticated navigation shell, mobile menu, profile dropdown, and logout action.
+- `Home.vue` and `MyImages.vue` are page shells for the gallery workflow.
+- `backend/routes/api.php` currently exposes the authenticated user endpoint.
+- `backend/routes/auth.php` exposes Breeze-style auth endpoints for registration, login, logout, password reset, and email verification.
+- Backend authentication tests are available under `backend/tests/Feature/Auth`.
+
+## Current Status
+
+The authentication foundation is in place. The app can support the normal Sanctum SPA login lifecycle once the backend environment and database are configured. The gallery-specific domain is the next missing layer: image database records, file storage, upload validation, authenticated image APIs, and frontend image rendering.
 
 ## Known Gaps
 
-- The upload page does not yet include a file picker, preview, validation, or upload request.
-- The backend does not yet include image models, migrations, storage logic, or image API routes.
+- The Upload page does not yet include a file picker, drag-and-drop area, preview, validation, progress state, or upload request.
+- The backend does not yet include image models, image migrations, storage logic, or image API routes.
 - The My Images page does not yet fetch or render uploaded images.
-- The frontend currently uses placeholder profile data in the authenticated layout.
-- Auth forms need user-facing validation and error display cleanup.
+- The frontend currently uses placeholder profile data in `DefaultLayout.vue` instead of loading `GET /api/user`.
+- The auth forms log validation errors to the console but do not yet show polished user-facing error messages.
+- The login page heading currently says "Create an account", which should be adjusted to "Sign in" during UI cleanup.
 
 ## Suggested Next Development Steps
 
-1. Add an `images` database table with owner, title, filename, path, MIME type, size, and timestamps.
-2. Create authenticated API routes for image upload, image listing, image download/viewing, and image deletion.
-3. Store images through Laravel's filesystem abstraction, preferably using the `public` disk for local development.
-4. Build the upload form with drag-and-drop, progress state, file preview, and validation feedback.
-5. Build the My Images grid with loading, empty, error, and delete states.
-6. Replace placeholder user data in `DefaultLayout.vue` with data from `GET /api/user`.
-7. Add tests for image upload authorization, validation, listing, and deletion.
+1. Add an `images` database table with `user_id`, title, original filename, stored filename, path, MIME type, size, width, height, and timestamps.
+2. Create an `Image` Eloquent model with a relationship to `User`.
+3. Add authenticated API routes for image upload, image listing, image viewing or download, and image deletion.
+4. Store image files through Laravel's filesystem abstraction, using the `public` disk for local development.
+5. Run `php artisan storage:link` so public gallery files can be served locally.
+6. Build the Upload UI with file selection, drag-and-drop, preview thumbnails, upload progress, loading state, and validation feedback.
+7. Build the My Images grid with loading, empty, error, pagination, preview, and delete states.
+8. Replace placeholder user data in `DefaultLayout.vue` with data from `GET /api/user`.
+9. Add backend tests for image upload authorization, validation, listing, ownership, and deletion.
+10. Add frontend build checks before deployment.
 
 ## Image Generation Prompts
 
-Use these prompts to create README, portfolio, or presentation images for this project.
+Use these prompts to create project images for the GitHub README, portfolio, presentation slides, or social preview graphics.
 
 ### 1. Frontend UI Prompt
 
-Create a high-resolution product screenshot style image for "DashGallery", a modern Vue 3 image gallery web app. Show a clean authenticated dashboard in a desktop browser window with a dark top navigation bar, an Upload tab, a My Images tab, a profile dropdown, and a polished upload workspace. The main screen should include a large drag-and-drop image upload area, thumbnail previews, file names, progress indicators, and a simple gallery grid below it. Use a professional SaaS interface style with Tailwind CSS inspired spacing, white and light gray surfaces, indigo accents, crisp typography, subtle shadows, and responsive web app details. The image should look like a real frontend product UI, not a marketing landing page. No random unreadable text, no fake code, no distorted buttons. Aspect ratio 16:9, sharp, clean, realistic browser chrome.
+Create a high-resolution product screenshot style image for "DashGallery", a modern Vue 3 private image gallery web application. Show the authenticated frontend running inside a realistic desktop browser window. The top navigation should have a dark header, the DashGallery logo area, an active Upload tab, a My Images tab, a notification icon, and a profile dropdown. The main Upload screen should feel like a real SaaS dashboard: a clean page header, a large drag-and-drop image upload area, selected image thumbnails, file names, MIME type and size metadata, upload progress bars, validation states, and a compact recent uploads gallery grid below. Use Tailwind CSS inspired spacing, white and light gray surfaces, crisp typography, indigo action accents, subtle borders, and restrained shadows. Include responsive design hints such as a mobile menu icon in the browser preview or a small secondary mobile mockup beside the desktop view. Make the interface practical and inspectable, not a marketing landing page. Avoid random unreadable placeholder text, distorted buttons, fake code blocks, excessive gradients, dark blurry backgrounds, or decorative shapes. Aspect ratio 16:9, sharp details, professional GitHub README quality.
 
 ### 2. Backend Architecture Prompt
 
-Create a detailed technical architecture illustration for the backend of "DashGallery", a Laravel 11 API powered by Laravel Sanctum. Visualize a Vue SPA on the left sending authenticated Axios requests to a Laravel API server in the center. Show the CSRF cookie flow, login/register/logout endpoints, protected `/api/user` route, Sanctum session authentication, controllers, middleware, database migrations, and a future image storage layer connected to a database and filesystem disk. Use clean diagram styling with labeled boxes, directional arrows, subtle Laravel red accents, neutral background, and clear separation between browser, API, authentication, database, and file storage. Make it suitable for a GitHub README architecture section. Aspect ratio 16:9, professional software architecture diagram, readable labels, minimal clutter.
+Create a detailed technical architecture diagram for the backend of "DashGallery", a Laravel 11 API secured with Laravel Sanctum for a first-party Vue SPA. Place the Vue/Vite frontend browser on the left, the Laravel API server in the center, and persistence services on the right. Show the browser requesting `GET /sanctum/csrf-cookie`, then sending credentialed Axios requests to `POST /register`, `POST /login`, `POST /logout`, and protected `GET /api/user`. In the Laravel server area, include labeled modules for routes, auth controllers, login request validation, Sanctum middleware, session guard, CSRF protection, Eloquent User model, migrations, and PHPUnit tests. Add a clearly marked future gallery layer with Image model, upload controller, validation, storage service, database records, and filesystem/public disk. Use clean directional arrows, readable labels, neutral background, Laravel red highlights, Vue green highlights, and database/storage icons. The diagram should be technically accurate, polished, and suitable for a GitHub README architecture section. Aspect ratio 16:9, minimal clutter, no fake source code, no tiny unreadable text.
 
 ### 3. Visual Brand Prompt
 
-Create a polished hero/banner visual for "DashGallery", a private full-stack image gallery application. Show a modern laptop or wide monitor displaying an elegant personal image gallery with upload controls, photo thumbnails, secure account navigation, and a clean dashboard layout. Add subtle visual cues for full-stack development: a small Laravel API panel, Vue component cards, secure session/authentication symbols, and image storage elements in the background. The mood should feel reliable, creative, and developer-friendly. Use balanced colors: white, graphite, indigo, soft green, and small Laravel red highlights. Avoid dark blurry stock-photo style; keep the product screen clear and inspectable. No people required, no exaggerated 3D icons, no fantasy elements. Aspect ratio 16:9, high detail, GitHub README banner quality.
+Create a polished hero/banner visual for "DashGallery", a full-stack private image gallery application. Show a modern laptop or wide monitor with the actual product concept visible: an authenticated dashboard, upload controls, image thumbnail grid, secure profile navigation, and clean gallery management actions. Around the main screen, add subtle visual cues for the stack and workflow: Vue component cards, Laravel API endpoint panels, Sanctum/session security badges, database rows, and image storage folders connected by fine lines. The mood should feel reliable, creative, developer-friendly, and production-oriented. Use a balanced color palette of white, graphite, indigo, soft green, and small Laravel red highlights. Keep the product screen bright, clear, and inspectable. Avoid people, fantasy elements, exaggerated 3D mascots, stock-photo blur, dark dramatic lighting, random text, or unreadable UI. Design it as a GitHub README banner or portfolio cover image with strong composition and generous spacing. Aspect ratio 16:9, high detail, clean software-product aesthetic.
 
 ## License
 
